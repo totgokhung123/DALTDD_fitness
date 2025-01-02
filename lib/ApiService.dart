@@ -16,10 +16,22 @@ class ApiService {
   }
 
   // Thêm người dùng mới
-  Future<void> addUser(String name, String email) async {
+  Future<void> addUser({
+    required String name,
+    required String email,
+    required String password,
+    required String weight,
+    required String dateOfBirth,
+  }) async {
     final response = await http.post(
-      Uri.parse(apiUrl),
-      body: {'name': name, 'email': email},
+      Uri.parse('${apiUrl}add_user.php'),
+      body: {
+        'name': name,
+        'email': email,
+        'password': password,
+        'weight': weight,
+        'date_of_birth': dateOfBirth,
+      },
     );
 
     if (response.statusCode != 200) {
