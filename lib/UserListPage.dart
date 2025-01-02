@@ -12,15 +12,7 @@ class _UserListPageState extends State<UserListPage> {
   @override
   void initState() {
     super.initState();
-    fetchData(); // Tải dữ liệu khi ứng dụng khởi động
-  }
-
-// Gọi fetchData() từ một nút hoặc hành động khác để tải lại
-  void fetchData() async {
-    final data = await ApiService.getData();
-    setState(() {
-      _data = data;
-    });
+    _users = ApiService().fetchUsers();
   }
 
   @override
