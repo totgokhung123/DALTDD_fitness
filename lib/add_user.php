@@ -10,7 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $weight = $_POST['weight'];
     $date_of_birth = $_POST['date_of_birth'];
 
-
     $query = "INSERT INTO users (name, email, password, weight, date_of_birth) VALUES ('$name', '$email', '$password', '$weight', '$date_of_birth')";
     
     if ($conn->query($query)) {

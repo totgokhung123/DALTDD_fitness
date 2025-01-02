@@ -21,7 +21,7 @@ class _AddUserPageState extends State<AddUserPage> {
           name: _nameController.text,
           email: _emailController.text,
           password: _passwordController.text,
-          weight: _weightController.text,
+          weight: double.parse(_weightController.text),
           dateOfBirth: _dateOfBirthController.text,
         );
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,17 +76,8 @@ class _AddUserPageState extends State<AddUserPage> {
                   controller: _dateOfBirthController,
                   decoration:
                       InputDecoration(labelText: 'Date of Birth (YYYY-MM-DD)'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter a date of birth';
-                    }
-                    try {
-                      DateTime.parse(value);
-                    } catch (e) {
-                      return 'Enter a valid date (YYYY-MM-DD)';
-                    }
-                    return null;
-                  },
+                  validator: (value) =>
+                      value!.isEmpty ? 'Enter a date of birth' : null,
                 ),
                 SizedBox(height: 20),
                 ElevatedButton(

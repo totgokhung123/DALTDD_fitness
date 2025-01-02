@@ -20,19 +20,22 @@ class ApiService {
     required String name,
     required String email,
     required String password,
-    required String weight,
+    required double weight,
     required String dateOfBirth,
   }) async {
     final response = await http.post(
-      Uri.parse('${apiUrl}add_user.php'),
+      Uri.parse('http://10.0.2.2/add_user.php'),
       body: {
         'name': name,
         'email': email,
         'password': password,
-        'weight': weight,
+        'weight': weight.toString(),
         'date_of_birth': dateOfBirth,
       },
     );
+
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
     if (response.statusCode != 200) {
       throw Exception('Failed to add user');
