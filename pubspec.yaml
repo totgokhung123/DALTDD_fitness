@@ -43,6 +43,7 @@ dependencies:
   animated_toggle_switch: ^0.6.2
   http: ^1.2.2
   readmore: ^2.1.0
+  collection: ^1.17.0
   calendar_agenda:
     path: dev_lib/calendar_agenda/
   intl: ^0.18.1
