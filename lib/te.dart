@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:fitness/ApiService.dart'; // Đảm bảo import dịch vụ API
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
-class AddFoodPage extends StatefulWidget {
+import 'package:barcode_scan2/barcode_scan2.dart';
+class te extends StatefulWidget {
   final String userId;
   final int mealTypeId;
   final DateTime ngay;
 
-  const AddFoodPage({
+  const te({
     Key? key,
     required this.userId,
     required this.mealTypeId,
@@ -16,14 +16,17 @@ class AddFoodPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _AddFoodPageState createState() => _AddFoodPageState();
+  _teState createState() => _teState();
 }
 
-class _AddFoodPageState extends State<AddFoodPage> {
+class _teState extends State<te> {
   int quantity = 1;
   List<Map<String, dynamic>> foods = [];
   Map<String, dynamic>? selectedFood;
-
+  String? _barcode;
+  Map<String, dynamic>? _foodData;
+  bool _isLoading = false;
+  String _errorMessage = "";
   @override
   void initState() {
     super.initState();
@@ -44,7 +47,66 @@ class _AddFoodPageState extends State<AddFoodPage> {
       print('Failed to fetch foods');
     }
   }
+  /// Quét mã vạch
+  Future<void> _scanBarcode() async {
+    try {
+      var result = await BarcodeScanner.scan();
+      setState(() {
+        _barcode = result.rawContent;
+        _foodData = null; // Xóa dữ liệu trước đó
+        _errorMessage = ""; // Reset lỗi
+      });
 
+      if (_barcode != null && _barcode!.isNotEmpty) {
+        _fetchFoodData(_barcode!);
+      } else {
+        setState(() {
+          _errorMessage = "Không nhận được mã vạch.";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = "Quét mã vạch thất bại: $e";
+      });
+    }
+  }
+
+  /// Lấy thông tin thực phẩm từ Open Food Facts API
+  Future<void> _fetchFoodData(String barcode) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = "";
+    });
+
+    final url = Uri.parse(
+        'https://world.openfoodfacts.org/api/v0/product/$barcode.json');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          if (data['status'] == 1) {
+            _foodData = data['product'];
+          } else {
+            _errorMessage = "Không tìm thấy dữ liệu cho mã vạch này.";
+          }
+        });
+      } else {
+        setState(() {
+          _errorMessage =
+          "Không thể lấy dữ liệu. Mã lỗi: ${response.statusCode}";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = "Lỗi khi lấy dữ liệu: $e";
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
   void addFood() async {
     if (selectedFood == null) {
       ScaffoldMessenger.of(context).showSnackBar(

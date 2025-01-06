@@ -1,5 +1,7 @@
 import 'package:calendar_agenda/calendar_agenda.dart';
-import 'package:fitness/AddFoodPage.dart';
+import 'package:fitness/scantest.dart';
+// import 'package:fitness/AddFoodPage.dart';
+import 'package:fitness/te.dart';
 import 'package:fitness/ApiService.dart';
 import 'package:flutter/material.dart';
 import 'package:simple_animation_progress_bar/simple_animation_progress_bar.dart';
@@ -49,7 +51,7 @@ class _MealScheduleViewState extends State<MealScheduleView> {
   void _updateMealsForSelectedDate(DateTime selectedDate) {
     setState(() {
       _selectedDate = selectedDate;
-
+      print("_selectedDate: "+ _selectedDate.toString());
       // Lọc món ăn theo ngày được chọn
       _mealsForSelectedDate = mealSchedule
           .where((meal) {
@@ -67,10 +69,10 @@ class _MealScheduleViewState extends State<MealScheduleView> {
 
       // Cập nhật groupedMeals cho ngày đã chọn
       groupedMeals = groupBy(
-        _mealsForSelectedDate.isEmpty ? mealSchedule : _mealsForSelectedDate,
+        _mealsForSelectedDate,
             (meal) => meal['type_meal_name'] as String? ?? 'Unknown', // Nếu không có type_meal_name, gán 'Unknown'
       );
-
+      print("groupedMeals up to date: "+ groupedMeals.toString());
       // // Đảm bảo rằng tất cả các loại bữa ăn mặc định đều có mặt trong groupedMeals
       // for (var mealType in defaultMealTypes) {
       //   groupedMeals.putIfAbsent(mealType, () => []); // Thêm loại bữa ăn trống nếu chưa có
@@ -80,6 +82,7 @@ class _MealScheduleViewState extends State<MealScheduleView> {
       groupedMeals = Map.fromEntries(defaultMealTypes.map((type) {
         return MapEntry(type, groupedMeals[type] ?? []);
       }));
+      print("groupedMeals maping: "+ groupedMeals.toString());
     });
   }
   Future<void> fetchMeals() async {
@@ -88,23 +91,25 @@ class _MealScheduleViewState extends State<MealScheduleView> {
       final typeMealsData = await ApiService().fetchTypeMeal();
       // Lấy dữ liệu món ăn từ API
       final mealsDataRaw = await ApiService().fetchMealSchedule(1); // Thay 1 bằng user_id thực tế
+      print("mealsDataRaw:" + mealsDataRaw.toString());
       // Chuyển đổi danh sách món ăn thành List<Map<String, dynamic>>
       final mealsData = List<Map<String, dynamic>>.from(mealsDataRaw);
+      print("mealsData:" + mealsData.toString());
       // Chuyển đổi dữ liệu loại bữa ăn
       final defaultTypeMeals = List<Map<String, dynamic>>.from(typeMealsData);
-
+      print("defaultTypeMeals:" + defaultTypeMeals.toString());
       // Gộp dữ liệu món ăn theo loại bữa ăn
       Map<String, List<Map<String, dynamic>>> fetchedGroupedMeals = groupBy(
         mealsData,
-            (meal) => meal['type_meal_name'] as String, // Đảm bảo meal['type_meal_name'] là String
+         (meal) => meal['type_meal_name'] as String, // Đảm bảo meal['type_meal_name'] là String
       );
-
+      print("fetchedGroupedMeals:" + fetchedGroupedMeals.toString());
       // Kết hợp với danh sách mặc định các loại bữa ăn
       Map<String, List<Map<String, dynamic>>> completeGroupedMeals = {
         for (var typeMeal in defaultTypeMeals)
           typeMeal['name']: fetchedGroupedMeals[typeMeal['name']] ?? [],
       };
-
+      print("completeGroupedMeals:" + completeGroupedMeals.toString());
       // Cập nhật trạng thái
       setState(() {
         mealSchedule = mealsData;
@@ -113,6 +118,7 @@ class _MealScheduleViewState extends State<MealScheduleView> {
 
       // Lọc dữ liệu theo ngày hiện tại
       _updateMealsForSelectedDate(_selectedDate);
+      print("_updateMealsForSelectedDate:" + _updateMealsForSelectedDate.toString());
     } catch (e) {
       print('Error fetching meals or type meals: $e');
     }
@@ -267,14 +273,13 @@ class _MealScheduleViewState extends State<MealScheduleView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // Hiển thị tất cả meal_type, mặc định có dữ liệu hoặc không
                   if (groupedMeals.isNotEmpty)
                     ...groupedMeals.entries.map((entry) {
                       String mealType = entry.key;
-                      print("mealType"+ mealType.toString());
+                      print("mealType: "+ mealType.toString());
                       List<Map<String, dynamic>> foods = List<Map<String, dynamic>>.from(entry.value);
-                      print("food epand"+ foods.toString());
+                      print("food epand: "+ foods.toString());
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -333,7 +338,7 @@ class _MealScheduleViewState extends State<MealScheduleView> {
                           Padding(
                             padding: const EdgeInsets.only(top: 8.0),
                             child: ElevatedButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 int mealTypeId = getMealTypeId(mealType);
                                 print("mealTypeId: "+ mealTypeId.toString());
                                 if (mealTypeId == 0) {
@@ -344,16 +349,22 @@ class _MealScheduleViewState extends State<MealScheduleView> {
                                 }
                                 print("date: "+ selectedDate.toString());
                                 print(userid.toString());
-                                Navigator.push(
+                                final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => AddFoodPage(
+                                    builder: (context) => scantest(
                                       userId: userid.toString(),
                                       mealTypeId: mealTypeId,
-                                      ngay: selectedDate,// Gán giá trị gán cứng
+                                      ngay: selectedDate, // Gán giá trị ngày hiện tại
                                     ),
                                   ),
                                 );
+
+                                // Kiểm tra nếu có món ăn mới được thêm
+                                if (result == true) {
+                                  // Gọi lại fetchMeals() để cập nhật giao diện
+                                  await fetchMeals();
+                                }
                               },
                               child: Text('Add Food'),
                             ),

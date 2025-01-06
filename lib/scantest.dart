@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:barcode_scan2/barcode_scan2.dart'; // Thêm thư viện quét mã vạch
 import 'package:fitness/ApiService.dart'; // Đảm bảo import dịch vụ API
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class AddFoodPage extends StatefulWidget {
+class scantest extends StatefulWidget {
   final String userId;
   final int mealTypeId;
   final DateTime ngay;
 
-  const AddFoodPage({
+  const scantest({
     Key? key,
     required this.userId,
     required this.mealTypeId,
@@ -16,10 +17,10 @@ class AddFoodPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _AddFoodPageState createState() => _AddFoodPageState();
+  _scantestState createState() => _scantestState();
 }
 
-class _AddFoodPageState extends State<AddFoodPage> {
+class _scantestState extends State<scantest> {
   int quantity = 1;
   List<Map<String, dynamic>> foods = [];
   Map<String, dynamic>? selectedFood;
@@ -45,6 +46,61 @@ class _AddFoodPageState extends State<AddFoodPage> {
     }
   }
 
+  Future<void> _scanBarcode() async {
+    try {
+      // Quét mã vạch
+      var result = await BarcodeScanner.scan();
+      String barcode = result.rawContent;
+
+      if (barcode.isNotEmpty) {
+        // Gửi yêu cầu xử lý mã vạch đến server
+        final response = await http.post(
+          Uri.parse('http://10.0.2.2/handle_barcode.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'barcode': barcode,
+            'user_id': widget.userId,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+
+          if (data['status'] == 'found') {
+            // Mã vạch đã tồn tại -> Chọn thực phẩm này
+            setState(() {
+              selectedFood = foods.firstWhere(
+                    (food) => food['id'] == data['food_id'],
+              );
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Food selected: ${selectedFood!['name']}')),
+            );
+          } else if (data['status'] == 'added') {
+            // Mã vạch mới -> Thêm thực phẩm mới vào danh sách
+            setState(() {
+              foods.add(data['new_food']);
+              selectedFood = data['new_food'];
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('New food added: ${selectedFood!['name']}')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to handle barcode.')),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error scanning barcode: $e')),
+      );
+    }
+  }
+
   void addFood() async {
     if (selectedFood == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,7 +122,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Food added successfully')),
       );
-      Navigator.pop(context,true); // Quay lại trang trước
+      Navigator.pop(context, true); // Quay lại trang trước
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to add food: $e')),
@@ -98,7 +154,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                 final isSelected = selectedFood != null && selectedFood!['id'] == food['id'];
                 return ListTile(
                   title: Text(food['name']),
-                  subtitle: Text('Calories: ${food['calories_per_unit']}' + '| protein: ${food['protein']}'+ '| carbs: ${food['carbs']}'+ '| fat: ${food['fat']}'),
+                  subtitle: Text(
+                      'Calories: ${food['calories_per_unit']} | Protein: ${food['protein']} | Carbs: ${food['carbs']} | Fat: ${food['fat']}'),
                   trailing: Checkbox(
                     value: isSelected,
                     onChanged: (value) {
@@ -137,6 +194,11 @@ class _AddFoodPageState extends State<AddFoodPage> {
                 ),
               ],
             ),
+          ),
+          ElevatedButton.icon(
+            onPressed: _scanBarcode,
+            icon: Icon(Icons.qr_code_scanner),
+            label: Text("Scan Barcode"),
           ),
         ],
       ),
